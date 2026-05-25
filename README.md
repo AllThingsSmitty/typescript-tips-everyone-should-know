@@ -10,7 +10,7 @@ Most of these are small individually. Together, they dramatically change how Typ
 2. [Let Type Inference Do the Work](#let-type-inference-do-the-work)
 3. [Prefer `satisfies` Over `as`](#prefer-satisfies-over-as)
 4. [Derive Types From Values](#derive-types-from-values-instead-of-duplicating-them)
-5. [Use Discriminated Unions](#model-impossible-states-with-discriminated-unions)
+5. [Model Impossible States With Discriminated Unions](#model-impossible-states-with-discriminated-unions)
 6. [Use Exhaustive Checks With `never`](#use-exhaustive-checks-with-never)
 7. [Use `as const` for Constants](#use-as-const-for-configuration-and-constants)
 8. [Use Type Predicates](#use-type-predicates-for-reusable-narrowing)
