@@ -126,9 +126,18 @@ These models tend to scale much better than loose optional-property blobs.
 Discriminated unions become much more powerful with exhaustiveness checking.
 
 ```ts
-default: {
-  const exhaustive: never = state;
-  return exhaustive;
+function getStatus({ status }: State) {
+  switch (status) {
+    case "loading":
+      return "Loading...";
+    case "success":
+      return "Done";
+    case "error":
+      return "Error";
+    default:
+      const exhaustive: never = status;
+      return exhaustive;
+  }
 }
 ```
 
