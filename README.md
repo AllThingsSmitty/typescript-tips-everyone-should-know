@@ -10,7 +10,7 @@ Most of these are small individually. Together, they dramatically change how Typ
 2. [Let Type Inference Do the Work](#let-type-inference-do-the-work)
 3. [Prefer `satisfies` Over `as`](#prefer-satisfies-over-as)
 4. [Derive Types From Values](#derive-types-from-values-instead-of-duplicating-them)
-5. [Model Impossible States With Discriminated Unions](#model-impossible-states-with-discriminated-unions)
+5. [Make Invalid States Impossible to Represent](#make-invalid-states-impossible-to-represent)
 6. [Use Exhaustive Checks With `never`](#use-exhaustive-checks-with-never)
 7. [Use `as const` for Constants](#use-as-const-for-configuration-and-constants)
 8. [Use Type Predicates](#use-type-predicates-for-reusable-narrowing)
@@ -26,7 +26,7 @@ Most of these are small individually. Together, they dramatically change how Typ
 
 A lot of type safety starts here.
 
-Most TypeScript problems start when `any` enters the system.
+`unknown` forces you to prove what a value is before using it. `any` skips the type system entirely, allowing unsafe operations to spread through your code.
 
 ```ts
 function parse(data: unknown) {
@@ -38,15 +38,15 @@ function parse(data: unknown) {
 
 #### Why it matters
 
-- Forces validation
-- Preserves safety
-- Prevents type leakage
+- Forces validation before use
+- Preserves type safety
+- Prevents unsafe type leakage
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### Let Type Inference Do the Work
 
-The best TypeScript code often has fewer explicit types than beginners expect.
+The best TypeScript code often relies on inference instead of repeating information the compiler already knows.
 
 ```ts
 const name = "Ada";
@@ -88,7 +88,9 @@ const routes = {
 } as Record<string, string>;
 ```
 
-`satisfies` validates without losing inference.
+`satisfies` checks that a value matches a type while preserving its inferred type.
+
+Use `satisfies` when validating object shapes. Reserve `as` for cases where you're expressing information the compiler genuinely can't infer.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -102,13 +104,15 @@ const roles = ["admin", "user", "guest"] as const;
 type Role = (typeof roles)[number];
 ```
 
-Keeping runtime values and types in sync manually almost always drifts over time.
+This creates a single source of truth. If the runtime values change, the type updates automatically, eliminating duplication and preventing the two from drifting apart.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
-### Model Impossible States With Discriminated Unions
+### Make Invalid States Impossible to Represent
 
-This is where TypeScript starts becoming architectural.
+Good TypeScript models don't just describe data, they prevent impossible combinations from existing in the first place.
+
+Discriminated unions are one of the most effective ways to model these constraints.
 
 ```ts
 type State =
@@ -117,13 +121,15 @@ type State =
   | { status: "error"; error: Error };
 ```
 
-These models tend to scale much better than loose optional-property blobs.
+These models scale much better than loose optional property blobs because invalid states simply can't be represented.
+
+Future refactors become safer because the compiler ensures every valid state is handled.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### Use Exhaustive Checks With `never`
 
-Discriminated unions become much more powerful with exhaustiveness checking.
+Once you've modeled your states as a discriminated union, exhaustiveness checking ensures every case is handled.
 
 ```ts
 default: {
@@ -132,7 +138,7 @@ default: {
 }
 ```
 
-Future refactors become compiler errors instead of runtime bugs.
+Add a new state, and the compiler immediately points out every place that needs updating.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -158,7 +164,7 @@ const theme = {
 
 Now it becomes `'dark'`.
 
-Tiny feature, huge usefulness.
+A small feature that dramatically improves inference for configuration objects and constants.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -217,7 +223,9 @@ const UserSchema = z.object({
 });
 ```
 
-Type safety ends at runtime boundaries unless you validate.
+Every API response, form submission, environment variable, JSON file, and user input is an untrusted boundary.
+
+TypeScript can't validate external data; you need runtime validation for that.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -238,7 +246,9 @@ enum Role {
 }
 ```
 
-In most applications, literal unions end up simpler to refactor, easier to serialize, and less surprising at runtime than enums.
+In most application code, literal unions are easier to refactor, serialize, and reason about than enums.
+
+Enums still have valid use cases, but they're often unnecessary.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -271,6 +281,7 @@ Strict mode is where TypeScript really starts paying off.
 ```json
 {
   "strict": true,
+  "useUnknownInCatchVariables": true,
   "noUncheckedIndexedAccess": true,
   "exactOptionalPropertyTypes": true
 }
@@ -310,14 +321,14 @@ This compiles:
 const user = (await response.json()) as User;
 ```
 
-But may still explode at runtime.
+But it may still fail at runtime.
 
-TypeScript improves correctness:
+TypeScript improves correctness, but it isn't a runtime safety net.
 
-- It does not replace validation
+- It does not validate external data
 - It does not guarantee good architecture
 - It does not eliminate runtime bugs
 
-This distinction becomes increasingly important in larger systems.
+Use TypeScript to model your program well. Then validate anything that comes from the outside world.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
