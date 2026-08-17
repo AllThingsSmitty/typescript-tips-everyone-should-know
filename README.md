@@ -2,7 +2,7 @@
 
 A curated collection of practical TypeScript patterns that improve safety, readability, maintainability, and developer experience.
 
-Most of these are small individually. Together, they dramatically change how TypeScript code feels to work in.
+Most of these are small individually. Together, they change how TypeScript code feels day to day.
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ Most of these are small individually. Together, they dramatically change how Typ
 6. [Use Exhaustive Checks With `never`](#use-exhaustive-checks-with-never)
 7. [Use `as const` for Constants](#use-as-const-for-configuration-and-constants)
 8. [Use Type Predicates](#use-type-predicates-for-reusable-narrowing)
-9. [Build Types From Existing Types](#build-new-types-from-existing-types)
+9. [Build New Types From Existing Types](#build-new-types-from-existing-types)
 10. [Validate External Data at Runtime](#validate-external-data-at-runtime)
 11. [Avoid `enum` in Most Cases](#avoid-enum-in-most-cases)
 12. [Prefer Inferable Generics](#prefer-generics-that-infer-automatically)
@@ -70,7 +70,7 @@ Inference tends to scale better than annotation.
 
 ### Prefer `satisfies` Over `as`
 
-One of the most important modern TypeScript features.
+Added in TS 4.9, and one worth adopting immediately.
 
 ```ts
 const routes = {
@@ -132,13 +132,23 @@ Future refactors become safer because the compiler ensures every valid state is 
 Once you've modeled your states as a discriminated union, exhaustiveness checking ensures every case is handled.
 
 ```ts
-default: {
-  const exhaustive: never = state;
-  return exhaustive;
+function render(state: State) {
+  switch (state.status) {
+    case "loading":
+      return "Loading...";
+    case "success":
+      return state.data;
+    case "error":
+      throw state.error;
+    default: {
+      const exhaustive: never = state;
+      return exhaustive;
+    }
+  }
 }
 ```
 
-Add a new state, and the compiler immediately points out every place that needs updating.
+Add a new state to the union, and the compiler immediately points out every place that needs updating.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -164,13 +174,13 @@ const theme = {
 
 Now it becomes `'dark'`.
 
-A small feature that dramatically improves inference for configuration objects and constants.
+A small addition that meaningfully improves inference for configuration objects and constants.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### Use Type Predicates for Reusable Narrowing
 
-Connect runtime checks to compile-time intelligence.
+Type predicates let a runtime check teach the compiler something.
 
 ```ts
 function isUser(value: unknown): value is User {
@@ -198,7 +208,7 @@ Think in transformations instead of duplication.
 type UserPreview = Pick<User, "id" | "name">;
 ```
 
-### Learn these utility types
+#### Learn these utility types
 
 - `Pick`
 - `Omit`
@@ -246,7 +256,7 @@ enum Role {
 }
 ```
 
-In most application code, literal unions are easier to refactor, serialize, and reason about than enums.
+In most application code, literal unions are easier to refactor, serialize, and work with than enums.
 
 Enums still have valid use cases, but they're often unnecessary.
 
@@ -254,21 +264,21 @@ Enums still have valid use cases, but they're often unnecessary.
 
 ### Prefer Generics That Infer Automatically
 
-Great TypeScript APIs rarely require manual generic arguments.
+Great TypeScript APIs rarely require manual generic arguments. Design them so the type infers from what callers pass in.
 
-Less ideal:
-
-```ts
-getData<User>();
-```
-
-Better:
+Caller has to specify the type manually:
 
 ```ts
-getData(userSchema);
+getData<User>("/api/user");
 ```
 
-Inference usually scales better than annotation-heavy APIs.
+T infers from the schema — nothing to annotate:
+
+```ts
+getData("/api/user", userSchema);
+```
+
+If callers are constantly writing `<SomeType>`, that's usually a sign the API could do more of the work.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -281,19 +291,18 @@ Strict mode is where TypeScript really starts paying off.
 ```json
 {
   "strict": true,
-  "useUnknownInCatchVariables": true,
   "noUncheckedIndexedAccess": true,
   "exactOptionalPropertyTypes": true
 }
 ```
 
-These flags dramatically improve correctness.
+`strict` is the baseline. The other two aren't covered by it, and they catch a real class of bugs that strict alone misses.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### Learn Template Literal Types
 
-One of the most powerful modern TypeScript features.
+Underused, and worth learning.
 
 ```ts
 type Route = `/api/${string}`;
@@ -312,8 +321,6 @@ Once you start using them, they show up everywhere.
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### "Type-Safe" Does Not Mean "Runtime Safe"
-
-A perfect final tip because it reframes everything.
 
 This compiles:
 
