@@ -21,6 +21,8 @@ Most of these are small individually. Together, they change how TypeScript code 
 13. [Enable Strict Compiler Options](#turn-on-the-strict-compiler-options)
 14. [Learn Template Literal Types](#learn-template-literal-types)
 15. [Type Safety ≠ Runtime Safety](#type-safe-does-not-mean-runtime-safe)
+16. [Use Branded Types to Model Nominal Types](#use-branded-types-to-model-nominal-types)
+17. [Use `const` Type Parameters for Better Literal Inference](#use-const-type-parameters-for-better-literal-inference)
 
 ### Prefer `unknown` Over `any`
 
@@ -337,5 +339,67 @@ TypeScript improves correctness, but it isn't a runtime safety net.
 - It does not eliminate runtime bugs
 
 Use TypeScript to model your program well. Then validate anything that comes from the outside world.
+
+<sup>[Table of Contents](#table-of-contents)</sup>
+
+### Use Branded Types to Model Nominal Types
+
+TypeScript's type system is structural, not nominal. Two types with the same shape are interchangeable, even when they represent completely different concepts.
+
+```ts
+type UserId = string;
+type OrderId = string;
+
+function getUser(id: UserId) {
+  /* ... */
+}
+
+const orderId: OrderId = "order_123";
+getUser(orderId); // No error, but this is almost certainly a bug
+```
+
+Branding adds a compile-time-only tag that makes structurally identical types distinct:
+
+```ts
+type UserId = string & { readonly __brand: "UserId" };
+type OrderId = string & { readonly __brand: "OrderId" };
+
+function getUser(id: UserId) {
+  /* ... */
+}
+
+declare const orderId: OrderId;
+getUser(orderId); // Error: OrderId is not assignable to UserId
+```
+
+The brand only exists in the type system, there's no runtime cost, but it stops IDs, currencies, and other look-alike primitives from being swapped by mistake.
+
+<sup>[Table of Contents](#table-of-contents)</sup>
+
+### Use `const` Type Parameters for Better Literal Inference
+
+Added in TypeScript 5.0.
+
+Without `const`, generic type parameters widen to their general type, forcing callers to add `as const` themselves to preserve literal types:
+
+```ts
+function first<T extends readonly unknown[]>(arr: T) {
+  return arr[0];
+}
+
+const result = first(["a", "b", "c"]); // string
+```
+
+With the `const` modifier, the compiler infers the literal type directly from the argument:
+
+```ts
+function first<const T extends readonly unknown[]>(arr: T) {
+  return arr[0];
+}
+
+const result = first(["a", "b", "c"]); // "a"
+```
+
+This is especially useful for APIs that should preserve exactly what the caller passed in, without asking the caller to remember `as const`.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
