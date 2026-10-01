@@ -22,8 +22,8 @@ Most of these are small individually. Together, they change how TypeScript code 
 14. [Learn Template Literal Types](#learn-template-literal-types)
 15. [Type Safety ≠ Runtime Safety](#type-safe-does-not-mean-runtime-safe)
 16. [Use Branded Types to Model Nominal Types](#use-branded-types-to-model-nominal-types)
-17. [Use `const` Type Parameters for Better Literal Inference](#use-const-type-parameters-for-better-literal-inference)
-18. [Use `NoInfer<T>` to Control Where TypeScript Infers From](#use-noinferT-to-control-where-typescript-infers-from)
+17. [Preserve Literals With `const` Type Parameters](#preserve-literals-with-const-type-parameters)
+18. [Control Inference With `NoInfer<T>`](#control-inference-with-noinfert)
 
 ### Prefer `unknown` Over `any`
 
@@ -373,7 +373,7 @@ Zero runtime cost, and look-alike primitives can't be swapped by mistake.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
-### Use `const` Type Parameters for Better Literal Inference
+### Preserve Literals With `const` Type Parameters
 
 Without `const`, generic parameters widen to their base type:
 
@@ -382,7 +382,7 @@ function first<T extends readonly unknown[]>(arr: T) {
   return arr[0];
 }
 
-const result = first(["a", "b", "c"]); // string
+first(["a", "b", "c"]); // string
 ```
 
 With the `const` modifier, the literal comes through:
@@ -392,33 +392,29 @@ function first<const T extends readonly unknown[]>(arr: T) {
   return arr[0];
 }
 
-const result = first(["a", "b", "c"]); // "a"
+first(["a", "b", "c"]); // "a"
 ```
 
 Good for any API where the exact shape matters, without making callers remember `as const`.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
-### Use `NoInfer<T>` to Control Where TypeScript Infers From
+### Control Inference With `NoInfer<T>`
 
-TypeScript infers `T` from every argument, so a loose argument site can silently widen the type.
+TypeScript infers `T` from every argument, so a loose argument site can silently widen the type:
 
 ```ts
-function pick<T>(values: T[], fallback: T): T {
-  return values[0] ?? fallback;
-}
+function pick<T>(values: T[], fallback: T): T { ... }
 
-pick(["a", "b"], 42); // T infers as string | number, no error, but almost certainly a bug
+pick(["a", "b"], 42); // T infers as string | number, no error
 ```
 
 `NoInfer<T>` tells the compiler to skip that argument when solving for `T`:
 
 ```ts
-function pick<T>(values: T[], fallback: NoInfer<T>): T {
-  return values[0] ?? fallback;
-}
+function pick<T>(values: T[], fallback: NoInfer<T>): T { ... }
 
-pick(["a", "b"], 42); // Error: Argument of type 'number' is not assignable to 'string'
+pick(["a", "b"], 42); // Error: 'number' is not assignable to 'string'
 ```
 
 Most common with default values, fallbacks, and validation callbacks.
