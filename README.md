@@ -1,6 +1,6 @@
 # TypeScript Tips Everyone Should Know
 
-A curated collection of practical TypeScript patterns that improve safety, readability, maintainability, and developer experience.
+Practical TypeScript patterns for writing safer, more maintainable code.
 
 Most of these are small individually. Together, they change how TypeScript code feels day to day.
 
@@ -23,6 +23,7 @@ Most of these are small individually. Together, they change how TypeScript code 
 15. [Type Safety ≠ Runtime Safety](#type-safe-does-not-mean-runtime-safe)
 16. [Use Branded Types to Model Nominal Types](#use-branded-types-to-model-nominal-types)
 17. [Use `const` Type Parameters for Better Literal Inference](#use-const-type-parameters-for-better-literal-inference)
+18. [Use `NoInfer<T>` to Control Where TypeScript Infers From](#use-noinferT-to-control-where-typescript-infers-from)
 
 ### Prefer `unknown` Over `any`
 
@@ -48,7 +49,7 @@ function parse(data: unknown) {
 
 ### Let Type Inference Do the Work
 
-The best TypeScript code often relies on inference instead of repeating information the compiler already knows.
+The best TypeScript code relies on inference instead of restating what the compiler already knows.
 
 ```ts
 const name = "Ada";
@@ -66,7 +67,7 @@ const name: string = "Ada";
 - Hurts inference
 - Creates maintenance overhead
 
-Inference tends to scale better than annotation.
+Inference scales better.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -92,7 +93,7 @@ const routes = {
 
 `satisfies` checks that a value matches a type while preserving its inferred type.
 
-Use `satisfies` when validating object shapes. Reserve `as` for cases where you're expressing information the compiler genuinely can't infer.
+Use `satisfies` when validating object shapes. Reserve `as` for when the compiler can't figure it out on its own.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -106,15 +107,15 @@ const roles = ["admin", "user", "guest"] as const;
 type Role = (typeof roles)[number];
 ```
 
-This creates a single source of truth. If the runtime values change, the type updates automatically, eliminating duplication and preventing the two from drifting apart.
+Single source of truth. Change the runtime values and the type updates with them.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### Make Invalid States Impossible to Represent
 
-Good TypeScript models don't just describe data, they prevent impossible combinations from existing in the first place.
+Good TypeScript models don't just describe data. They prevent impossible combinations.
 
-Discriminated unions are one of the most effective ways to model these constraints.
+Discriminated unions are the cleanest way to enforce these constraints.
 
 ```ts
 type State =
@@ -123,7 +124,7 @@ type State =
   | { status: "error"; error: Error };
 ```
 
-These models scale much better than loose optional property blobs because invalid states simply can't be represented.
+These models scale much better than loose optional property blobs because invalid states can't be represented.
 
 Future refactors become safer because the compiler ensures every valid state is handled.
 
@@ -176,7 +177,7 @@ const theme = {
 
 Now it becomes `'dark'`.
 
-A small addition that meaningfully improves inference for configuration objects and constants.
+A small change that makes a real difference for config objects and constants.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -198,7 +199,7 @@ if (isUser(data)) {
 }
 ```
 
-This becomes especially useful around APIs and external input boundaries.
+Most useful at API and input boundaries.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -218,7 +219,7 @@ type UserPreview = Pick<User, "id" | "name">;
 - `Required`
 - Indexed access types
 
-These utilities become much more valuable as applications grow.
+They pay off more as the codebase grows.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -260,7 +261,7 @@ enum Role {
 
 In most application code, literal unions are easier to refactor, serialize, and work with than enums.
 
-Enums still have valid use cases, but they're often unnecessary.
+Enums have their place, but they're usually overkill.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
@@ -274,7 +275,7 @@ Caller has to specify the type manually:
 getData<User>("/api/user");
 ```
 
-T infers from the schema — nothing to annotate:
+T infers from the schema, nothing to annotate:
 
 ```ts
 getData("/api/user", userSchema);
@@ -344,43 +345,37 @@ Use TypeScript to model your program well. Then validate anything that comes fro
 
 ### Use Branded Types to Model Nominal Types
 
-TypeScript's type system is structural, not nominal. Two types with the same shape are interchangeable, even when they represent completely different concepts.
+TypeScript is structural, so two types with the same shape are interchangeable even when they mean different things.
 
 ```ts
 type UserId = string;
 type OrderId = string;
 
-function getUser(id: UserId) {
-  /* ... */
-}
+function getUser(id: UserId) { /* ... */ }
 
 const orderId: OrderId = "order_123";
-getUser(orderId); // No error, but this is almost certainly a bug
+getUser(orderId); // No error, but almost certainly a bug
 ```
 
-Branding adds a compile-time-only tag that makes structurally identical types distinct:
+A brand adds a compile-time-only tag that makes them distinct:
 
 ```ts
 type UserId = string & { readonly __brand: "UserId" };
 type OrderId = string & { readonly __brand: "OrderId" };
 
-function getUser(id: UserId) {
-  /* ... */
-}
+function getUser(id: UserId) { /* ... */ }
 
 declare const orderId: OrderId;
 getUser(orderId); // Error: OrderId is not assignable to UserId
 ```
 
-The brand only exists in the type system, there's no runtime cost, but it stops IDs, currencies, and other look-alike primitives from being swapped by mistake.
+Zero runtime cost, and look-alike primitives can't be swapped by mistake.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### Use `const` Type Parameters for Better Literal Inference
 
-Added in TypeScript 5.0.
-
-Without `const`, generic type parameters widen to their general type, forcing callers to add `as const` themselves to preserve literal types:
+Without `const`, generic parameters widen to their base type:
 
 ```ts
 function first<T extends readonly unknown[]>(arr: T) {
@@ -390,7 +385,7 @@ function first<T extends readonly unknown[]>(arr: T) {
 const result = first(["a", "b", "c"]); // string
 ```
 
-With the `const` modifier, the compiler infers the literal type directly from the argument:
+With the `const` modifier, the literal comes through:
 
 ```ts
 function first<const T extends readonly unknown[]>(arr: T) {
@@ -400,6 +395,32 @@ function first<const T extends readonly unknown[]>(arr: T) {
 const result = first(["a", "b", "c"]); // "a"
 ```
 
-This is especially useful for APIs that should preserve exactly what the caller passed in, without asking the caller to remember `as const`.
+Good for any API where the exact shape matters, without making callers remember `as const`.
+
+<sup>[Table of Contents](#table-of-contents)</sup>
+
+### Use `NoInfer<T>` to Control Where TypeScript Infers From
+
+TypeScript infers `T` from every argument, so a loose argument site can silently widen the type.
+
+```ts
+function pick<T>(values: T[], fallback: T): T {
+  return values[0] ?? fallback;
+}
+
+pick(["a", "b"], 42); // T infers as string | number, no error, but almost certainly a bug
+```
+
+`NoInfer<T>` tells the compiler to skip that argument when solving for `T`:
+
+```ts
+function pick<T>(values: T[], fallback: NoInfer<T>): T {
+  return values[0] ?? fallback;
+}
+
+pick(["a", "b"], 42); // Error: Argument of type 'number' is not assignable to 'string'
+```
+
+Most common with default values, fallbacks, and validation callbacks.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
