@@ -378,7 +378,7 @@ Zero runtime cost, and look-alike primitives can't be swapped by mistake.
 Without `const`, generic parameters widen to their base type:
 
 ```ts
-function first<T extends readonly unknown[]>(arr: T) {
+function first<T extends readonly unknown[]>(arr: T): T[0] {
   return arr[0];
 }
 
@@ -388,7 +388,7 @@ first(["a", "b", "c"]); // string
 With the `const` modifier, the literal comes through:
 
 ```ts
-function first<const T extends readonly unknown[]>(arr: T) {
+function first<const T extends readonly unknown[]>(arr: T): T[0] {
   return arr[0];
 }
 
@@ -397,6 +397,8 @@ first(["a", "b", "c"]); // "a"
 
 Good for any API where the exact shape matters, without making callers remember `as const`.
 
+The `const` modifier requires TypeScript 5.0 or later. The explicit `T[0]` return type preserves the relationship to the input; without it, both functions infer an `unknown` return type from the constraint.
+
 <sup>[Table of Contents](#table-of-contents)</sup>
 
 ### Control Inference With `NoInfer<T>`
@@ -404,19 +406,23 @@ Good for any API where the exact shape matters, without making callers remember 
 TypeScript infers `T` from every argument, so a loose argument site can silently widen the type:
 
 ```ts
-function pick<T>(values: T[], fallback: T): T { ... }
+function pick<T extends string>(values: T[], fallback: T): T {
+  return values[0] ?? fallback;
+}
 
-pick(["a", "b"], 42); // T infers as string | number, no error
+pick(["a", "b"], "c"); // T infers as "a" | "b" | "c", no error
 ```
 
 `NoInfer<T>` tells the compiler to skip that argument when solving for `T`:
 
 ```ts
-function pick<T>(values: T[], fallback: NoInfer<T>): T { ... }
+function pick<T extends string>(values: T[], fallback: NoInfer<T>): T {
+  return values[0] ?? fallback;
+}
 
-pick(["a", "b"], 42); // Error: 'number' is not assignable to 'string'
+pick(["a", "b"], "c"); // Error: '"c"' is not assignable to '"a" | "b"'
 ```
 
-Most common with default values, fallbacks, and validation callbacks.
+Available in TypeScript 5.4 or later. Most common with default values, fallbacks, and validation callbacks.
 
 <sup>[Table of Contents](#table-of-contents)</sup>
